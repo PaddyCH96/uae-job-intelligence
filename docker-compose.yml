@@ -1,0 +1,123 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database - Raw Data Storage
+  postgres:
+    image: postgres:16-alpine
+    container_name: uae-jobs-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-uae_jobs}
+      POSTGRES_USER: ${POSTGRES_USER:-jobs_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-localdev123}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-jobs_admin} -d ${POSTGRES_DB:-uae_jobs}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - uae-jobs-network
+
+  # Data Ingestion Service
+  ingestion:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: ingestion
+    container_name: uae-jobs-ingestion
+    env_file:
+      - .env
+    environment:
+      POSTGRES_HOST: postgres
+      PYTHONUNBUFFERED: 1
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./src:/app/src
+      - ./logs:/app/logs
+    command: python -m src.ingestion.main
+    networks:
+      - uae-jobs-network
+
+  # FastAPI Backend
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: api
+    container_name: uae-jobs-api
+    env_file:
+      - .env
+    environment:
+      POSTGRES_HOST: postgres
+      PYTHONUNBUFFERED: 1
+    ports:
+      - "${API_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./src:/app/src
+      - ./logs:/app/logs
+    command: uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - uae-jobs-network
+
+  # Streamlit Dashboard
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dashboard
+    container_name: uae-jobs-dashboard
+    env_file:
+      - .env
+    environment:
+      API_BASE_URL: http://api:8000
+      PYTHONUNBUFFERED: 1
+    ports:
+      - "${DASHBOARD_PORT:-8501}:8501"
+    depends_on:
+      - api
+    volumes:
+      - ./src:/app/src
+    command: streamlit run src/dashboard/main.py --server.port=8501 --server.address=0.0.0.0
+    networks:
+      - uae-jobs-network
+
+  # Prefect Server (Optional - for orchestration)
+  prefect-server:
+    image: prefecthq/prefect:2.19.4-python3.11
+    container_name: uae-jobs-prefect
+    environment:
+      PREFECT_API_URL: http://prefect-server:4200/api
+      PREFECT_SERVER_API_HOST: 0.0.0.0
+    ports:
+      - "4200:4200"
+    command: prefect server start --host 0.0.0.0
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4200/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - uae-jobs-network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  uae-jobs-network:
+    driver: bridge

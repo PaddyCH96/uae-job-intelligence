@@ -1,0 +1,152 @@
+# UAE AI & Data Job Intelligence Platform
+
+![Project Logo Placeholder](docs/assets/logo.png)
+
+## Overview
+
+The **UAE AI & Data Job Intelligence Platform** is an open-source initiative designed to continuously collect, transform, and analyze job market data within the United Arab Emirates. Our primary goal is to provide actionable intelligence for a diverse range of data and AI professionals, including Data Analysts, BI Analysts, Data Engineers, Analytics Engineers, AI Engineers, and ML Engineers. The platform aims to answer critical questions about the UAE job market, such as identifying growing skills, understanding the salary impact of various technologies, pinpointing aggressive hiring companies, and outlining optimal learning paths.
+
+This project is built with a strong emphasis on being **open-source first** and fostering **local-first development**. This means the entire stack can be run and managed effortlessly through Docker Compose. We envision this platform feeling like an internal labor market intelligence product at a large enterprise, delivering robust and insightful data without relying on expensive paid APIs.
+
+## Features
+
+Our platform boasts a comprehensive set of features:
+
+*   **Data Ingestion:** We collect job market data from various online sources through Python-based API ingestion and ethically sound web scraping.
+*   **Data Transformation:** We utilize `dbt Core` to meticulously clean, structure, and model raw data into refined analytical datasets.
+*   **Orchestration:** `Prefect` is employed for robust scheduling, monitoring, and management of our intricate data pipelines.
+*   **Backend API:** A high-performance `FastAPI` backend serves as the backbone for delivering data and AI-generated insights.
+*   **Interactive Dashboard:** A `Streamlit` dashboard provides an intuitive and interactive interface for exploring and visualizing job market intelligence.
+*   **AI-Powered Insights:** We leverage local Large Language Models (`Ollama` with `Qwen 3 8B` or `Gemma`) for advanced text analysis, precise skill extraction, and sophisticated trend prediction.
+*   **Containerized Environment:** The entire technology stack runs seamlessly via `Docker Compose`, ensuring consistent and reproducible development and deployment across all environments.
+
+## Getting Started
+
+These instructions will guide you through setting up and running a copy of the project on your local machine for development and testing.
+
+### Prerequisites
+
+Before you begin, please ensure you have the following installed:
+
+*   [Docker](https://docs.docker.com/get-docker/)
+*   [Docker Compose](https://docs.docker.com/compose/install/)
+*   [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
+
+### Installation
+
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/Paddych96/uae-ai-data-job-intelligence.git
+    cd uae-ai-data-job-intelligence
+    ```
+
+2.  **Start the environment:**
+    The entire development environment, encompassing databases, Prefect server, FastAPI, Streamlit, and Ollama, can be brought up with a single command:
+    ```bash
+    docker compose up --build
+    ```
+    Please note that this command will build the necessary Docker images, start all services, and set up the initial database. It might take some time on the first run, particularly for downloading base images and LLM models.
+
+3.  **Access the applications:**
+    Once the services are up and running, you can access the various components:
+
+    *   **Streamlit Dashboard:** Typically available at `http://localhost:8501`
+    *   **FastAPI Backend (Swagger UI):** Typically available at `http://localhost:8000/docs`
+    *   **Prefect UI:** Typically available at `http://localhost:4200`
+
+## Project Structure
+
+```
+.
+├── .github/
+│   └── workflows/
+│       └── ci.yml
+├── docs/
+│   ├── assets/
+│   │   └── logo.png
+│   ├── ARCHITECTURE.md
+│   ├── AI_STRATEGY.md
+│   ├── AGENTS.md
+│   ├── CHANGELOG.md
+│   ├── CLAUDE.md
+│   ├── CONTRIBUTING.md
+│   ├── CONVENTIONS.md
+│   ├── DATA_MODEL.md
+│   ├── DATA_SOURCES.md
+│   ├── DECISIONS.md
+│   ├── DEPLOYMENT.md
+│   ├── PIPELINE_DESIGN.md
+│   ├── PRODUCT_REQUIREMENTS.md
+│   ├── PROJECT_VISION.md
+│   ├── ROADMAP.md
+│   ├── SECURITY.md
+│   ├── SPRINT_01.md
+│   ├── TASKS.md
+│   └── TECH_STACK.md
+├── src/
+│   ├── ingestion/
+│   │   └── __init__.py
+│   │   └── linkedin_jobs.py
+│   ├── transformations/
+│   │   └── dbt_project/
+│   │       └── models/
+│   │           └── staging/
+│   │           └── intermediate/
+│   │           └── marts/
+│   ├── api/
+│   │   └── main.py
+│   ├── dashboard/
+│   │   └── app.py
+│   └── flows/
+│       └── __init__.py
+│       └── ingestion_flow.py
+├── tests/
+│   ├── unit/
+│   ├── integration/
+│   └── data_quality/
+├── .dockerignore
+├── .env.example
+├── .gitignore
+├── Dockerfile
+├── docker-compose.yml
+├── pyproject.toml
+├── README.md
+└── requirements.txt
+```
+
+## Documentation
+
+All comprehensive project documentation is conveniently located in the `docs/` directory. Key documents include:
+
+*   **`PROJECT_VISION.md`**: This document defines the mission, target users, success metrics, and non-goals of the platform.
+*   **`PRODUCT_REQUIREMENTS.md`**: Here, you will find the detailed functional and non-functional requirements.
+*   **`ARCHITECTURE.md`**: This provides a high-level overview of the system architecture, its components, and their communication flows.
+*   **`TECH_STACK.md`**: A comprehensive list of all technologies utilized in the project.
+*   **`DATA_SOURCES.md`**: Describes the various data sources and our methods for collection.
+*   **`DATA_MODEL.md`**: Outlines the conceptual data model, including fact and dimension tables.
+*   **`PIPELINE_DESIGN.md`**: Details the design of our data ingestion, transformation, and orchestration pipelines.
+*   **`AI_STRATEGY.md`**: Explains the integration of AI models and their crucial role in generating insights.
+*   **`ROADMAP.md`**: Presents the product roadmap, covering our MVP, V1, V2, and future stretch goals.
+*   **`SPRINT_01.md`**: Defines the tasks and deliverables for our initial development sprint.
+*   **`TASKS.md`**: A dynamic list of atomic implementation tasks for both human and AI agents.
+*   **`DECISIONS.md`**: Our Architectural Decision Records (ADRs) documenting key design choices and their rationale.
+*   **`CONTRIBUTING.md`**: Essential guidelines for contributing to the project.
+*   **`CONVENTIONS.md`**: Details our coding standards, naming conventions, and other project-specific agreements.
+*   **`TESTING_STRATEGY.md`**: Outlines our comprehensive approach to testing, encompassing unit, integration, and data quality tests.
+*   **`DEPLOYMENT.md`**: Describes our deployment strategy and various environments.
+*   **`SECURITY.md`**: Details our security policy and best practices to protect the platform and its data.
+*   **`CHANGELOG.md`**: A chronological record of all significant changes and updates.
+*   **`CLAUDE.md`**: Specific guidelines and constraints tailored for AI coding agents.
+*   **`AGENTS.md`**: Defines the roles and responsibilities for our various AI agents.
+
+## Contributing
+
+We warmly welcome contributions to the UAE AI & Data Job Intelligence Platform! Please refer to our `CONTRIBUTING.md` for detailed guidelines on how to contribute, including our branching strategy, commit message conventions, and code review process.
+
+## License
+
+This project is licensed under the MIT License – please see the `LICENSE` file for full details. (Note: The `LICENSE` file is yet to be created.)
+
+## Contact
+
+For any questions, inquiries, or to report issues, please open an issue on the GitHub repository at [https://github.com/Paddych96/uae-ai-data-job-intelligence](https://github.com/Paddych96/uae-ai-data-job-intelligence).
