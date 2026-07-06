@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, UTC
 import hashlib
 
 from src.utils.logger import logger
@@ -54,7 +54,7 @@ class BaseSource(ABC):
             "source_id": self._generate_source_id(raw_job),
             "source_name": self.source_name,
             "raw_data": raw_job,
-            "ingested_at": datetime.utcnow().isoformat(),
+            "ingested_at": datetime.now(UTC).isoformat(),
         }
 
     def _generate_source_id(self, raw_job: Dict[str, Any]) -> str:
@@ -187,7 +187,7 @@ class MockSource(BaseSource):
                 "location": cities[i % len(cities)],
                 "description": f"We are looking for an experienced {titles[i % len(titles)]} to join our team. "
                               f"Requirements: Python, SQL, Data Analysis. Salary: AED 15,000 - 25,000.",
-                "posted_date": datetime.utcnow().isoformat(),
+                "posted_date": datetime.now(UTC).isoformat(),
                 "salary_range": "AED 15,000 - 25,000",
                 "employment_type": "Full-time",
                 "experience_level": "Mid Level",
