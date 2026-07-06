@@ -1,7 +1,7 @@
 """Job data processor - handles storage and normalization."""
 
 from typing import List, Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, UTC
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -13,7 +13,8 @@ from src.database import (
     DimCompany,
     DimLocation,
     DimSource,
-    FactJobPosting
+    FactJobPosting,
+    FactJobPostingSnapshot,
 )
 from src.utils.logger import logger
 from src.utils.text import normalize_text, clean_html, compute_content_hash, extract_salary_range
@@ -158,78 +159,92 @@ class JobProcessor:
 
         return source.source_id
 
-    def normalize_and_store_job(self, raw_job: RawJobPosting) -> Optional[UUID]:
+    def normalize_and_store_job(self, db: Session, raw_job: RawJobPosting) -> Optional[UUID]:
         """
         Normalize raw job and store in fact table.
 
         Args:
+            db: Database session (shared with caller so processed flag persists)
             raw_job: Raw job posting record
 
         Returns:
             Job posting UUID if successful, None otherwise
         """
-        with get_db_context() as db:
-            try:
-                raw_data = raw_job.raw_data
+        try:
+            raw_data = raw_job.raw_data
 
-                # Extract and clean fields
-                title = raw_data.get("job_title") or raw_data.get("title", "")
-                description = clean_html(raw_data.get("description", ""))
-                company_name = raw_data.get("company", "Unknown")
-                city = raw_data.get("location", "Dubai")
+            # Extract and clean fields
+            title = raw_data.get("job_title") or raw_data.get("title", "")
+            description = clean_html(raw_data.get("description", ""))
+            company_name = raw_data.get("company", "Unknown")
+            city = raw_data.get("location", "Dubai")
 
-                # Get or create dimension records
-                company_id = self.get_or_create_company(db, company_name)
-                location_id = self.get_or_create_location(db, city)
-                source_id = self.get_or_create_source(db, raw_job.source_name)
+            # Get or create dimension records
+            company_id = self.get_or_create_company(db, company_name)
+            location_id = self.get_or_create_location(db, city)
+            source_id = self.get_or_create_source(db, raw_job.source_name)
 
-                # Extract salary
-                salary_text = raw_data.get("salary_range", "")
-                salary_min, salary_max, currency = extract_salary_range(salary_text)
+            # Extract salary
+            salary_text = raw_data.get("salary_range", "")
+            salary_min, salary_max, currency = extract_salary_range(salary_text)
 
-                # Compute content hash for deduplication
-                content_for_hash = f"{title}|{company_name}|{description[:500]}"
-                content_hash = compute_content_hash(content_for_hash)
+            # Compute content hash for deduplication
+            content_for_hash = f"{title}|{company_name}|{description[:500]}"
+            content_hash = compute_content_hash(content_for_hash)
 
-                # Create fact record
-                job_posting = FactJobPosting(
-                    raw_job_id=raw_job.id,
-                    job_title=title,
-                    job_description=description,
-                    posted_date=datetime.utcnow().date(),
-                    salary_min=salary_min,
-                    salary_max=salary_max,
-                    company_id=company_id,
-                    location_id=location_id,
-                    source_id=source_id,
-                    content_hash=content_hash,
-                    remote_allowed=raw_data.get("remote_allowed", False),
-                    visa_sponsorship=raw_data.get("visa_sponsorship", False),
-                )
-
-                db.add(job_posting)
-                db.commit()
-
-                # Mark raw job as processed
+            # Skip if duplicate content already stored
+            existing = db.query(FactJobPosting).filter(
+                FactJobPosting.content_hash == content_hash
+            ).first()
+            if existing:
                 raw_job.processed = True
                 db.commit()
+                return existing.job_posting_id
 
-                return job_posting.job_posting_id
+            # Create fact record
+            job_posting = FactJobPosting(
+                raw_job_id=raw_job.id,
+                job_title=title,
+                job_description=description,
+                posted_date=datetime.now(UTC).date(),
+                salary_min=salary_min,
+                salary_max=salary_max,
+                company_id=company_id,
+                location_id=location_id,
+                source_id=source_id,
+                content_hash=content_hash,
+                remote_allowed=raw_data.get("remote_allowed", False),
+                visa_sponsorship=raw_data.get("visa_sponsorship", False),
+            )
 
-            except Exception as e:
-                db.rollback()
-                self.logger.error(
-                    "normalization_error",
-                    raw_job_id=str(raw_job.id),
-                    error=str(e)
-                )
+            db.add(job_posting)
+            db.flush()  # populate job_posting.job_posting_id before snapshot
 
-                # Mark as processed with error
-                raw_job.processed = True
-                raw_job.processing_errors = str(e)
-                db.commit()
+            snapshot = FactJobPostingSnapshot(
+                job_posting_id=job_posting.job_posting_id,
+                snapshot_date=datetime.now(UTC).date(),
+                status="active",
+            )
+            db.add(snapshot)
 
-                return None
+            raw_job.processed = True
+            db.commit()
+
+            return job_posting.job_posting_id
+
+        except Exception as e:
+            db.rollback()
+            self.logger.error(
+                "normalization_error",
+                raw_job_id=str(raw_job.id),
+                error=str(e)
+            )
+
+            raw_job.processed = True
+            raw_job.processing_errors = str(e)
+            db.commit()
+
+            return None
 
     def process_unprocessed_jobs(self, limit: int = 100) -> int:
         """
@@ -251,7 +266,7 @@ class JobProcessor:
             self.logger.info("processing_jobs", count=len(unprocessed_jobs))
 
             for raw_job in unprocessed_jobs:
-                job_id = self.normalize_and_store_job(raw_job)
+                job_id = self.normalize_and_store_job(db, raw_job)
                 if job_id:
                     processed_count += 1
 

@@ -21,11 +21,11 @@ def normalize_text(text: str) -> str:
     # Convert to lowercase
     text = text.lower()
 
-    # Remove extra whitespace
-    text = " ".join(text.split())
-
     # Remove special characters (keep alphanumeric and spaces)
     text = re.sub(r'[^a-z0-9\s]', '', text)
+
+    # Collapse whitespace after stripping special chars
+    text = " ".join(text.split())
 
     return text.strip()
 
@@ -89,30 +89,38 @@ def extract_salary_range(text: str) -> tuple[Optional[float], Optional[float], O
     if not text:
         return None, None, None
 
-    # Common UAE salary patterns
-    patterns = [
-        # AED 10,000 - 15,000
-        r'AED\s*(\d{1,3}(?:,\d{3})*)\s*-\s*(\d{1,3}(?:,\d{3})*)',
-        # 10,000 - 15,000 AED
-        r'(\d{1,3}(?:,\d{3})*)\s*-\s*(\d{1,3}(?:,\d{3})*)\s*AED',
-        # USD 3,000 - 5,000
-        r'USD\s*(\d{1,3}(?:,\d{3})*)\s*-\s*(\d{1,3}(?:,\d{3})*)',
-        # $3,000 - $5,000
-        r'\$(\d{1,3}(?:,\d{3})*)\s*-\s*\$(\d{1,3}(?:,\d{3})*)',
+    def _parse_num(s: str) -> float:
+        return float(s.replace(',', ''))
+
+    def _currency(t: str) -> str:
+        return "USD" if ("USD" in t.upper() or "$" in t) else "AED"
+
+    # Range patterns (with or without comma grouping)
+    range_patterns = [
+        r'AED\s*(\d[\d,]*)\s*-\s*(\d[\d,]*)',       # AED 10,000 - 15,000 or AED 5000 - 9000
+        r'(\d[\d,]*)\s*-\s*(\d[\d,]*)\s*AED',       # 10,000 - 15,000 AED
+        r'USD\s*(\d[\d,]*)\s*-\s*(\d[\d,]*)',        # USD 3,000 - 5,000
+        r'\$(\d[\d,]*)\s*-\s*\$(\d[\d,]*)',          # $3,000 - $5,000
     ]
 
-    for pattern in patterns:
+    for pattern in range_patterns:
         match = re.search(pattern, text, re.IGNORECASE)
         if match:
-            min_sal = float(match.group(1).replace(',', ''))
-            max_sal = float(match.group(2).replace(',', ''))
+            return _parse_num(match.group(1)), _parse_num(match.group(2)), _currency(text)
 
-            # Determine currency
-            currency = "AED"
-            if "USD" in text.upper() or "$" in text:
-                currency = "USD"
+    # Single-value patterns
+    single_patterns = [
+        r'AED\s*(\d[\d,]*)',
+        r'(\d[\d,]*)\s*AED',
+        r'USD\s*(\d[\d,]*)',
+        r'\$(\d[\d,]*)',
+    ]
 
-            return min_sal, max_sal, currency
+    for pattern in single_patterns:
+        match = re.search(pattern, text, re.IGNORECASE)
+        if match:
+            val = _parse_num(match.group(1))
+            return val, val, _currency(text)
 
     return None, None, None
 

@@ -4,7 +4,7 @@ from typing import Optional, List, Any
 from datetime import date, datetime
 from uuid import UUID
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, model_validator
 
 
 class HealthResponse(BaseModel):
@@ -27,6 +27,19 @@ class JobPostingResponse(BaseModel):
     visa_sponsorship: bool
     extracted_skills: Optional[Any] = None
     extracted_technologies: Optional[Any] = None
+    company_name: Optional[str] = None
+    city: Optional[str] = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def populate_joined_fields(cls, obj: Any) -> Any:
+        # When Pydantic receives an ORM object, pull nested relationship values
+        # into the flat fields expected by the response schema.
+        if hasattr(obj, "company") and obj.company is not None:
+            obj.__dict__.setdefault("company_name", obj.company.company_name)
+        if hasattr(obj, "location") and obj.location is not None:
+            obj.__dict__.setdefault("city", obj.location.city)
+        return obj
 
 
 class JobSearchFilters(BaseModel):
