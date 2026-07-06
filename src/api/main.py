@@ -2,6 +2,7 @@
 
 from typing import List, Optional
 from datetime import date
+from uuid import UUID
 
 from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -108,31 +109,6 @@ def get_jobs(
     return jobs
 
 
-@app.get("/jobs/{job_id}", response_model=JobPostingResponse)
-def get_job(job_id: str, db: Session = Depends(get_db)):
-    """
-    Get single job posting by ID.
-
-    Args:
-        job_id: Job posting UUID
-        db: Database session
-
-    Returns:
-        Job posting details
-
-    Raises:
-        HTTPException: If job not found
-    """
-    job = db.query(FactJobPosting).filter(
-        FactJobPosting.job_posting_id == job_id
-    ).first()
-
-    if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
-
-    return job
-
-
 @app.get("/jobs/search", response_model=List[JobPostingResponse])
 def search_jobs(
     q: str = Query(..., min_length=2, description="Search query"),
@@ -169,6 +145,31 @@ def search_jobs(
     ).offset(skip).limit(limit).all()
 
     return jobs
+
+
+@app.get("/jobs/{job_id}", response_model=JobPostingResponse)
+def get_job(job_id: UUID, db: Session = Depends(get_db)):
+    """
+    Get single job posting by ID.
+
+    Args:
+        job_id: Job posting UUID
+        db: Database session
+
+    Returns:
+        Job posting details
+
+    Raises:
+        HTTPException: If job not found
+    """
+    job = db.query(FactJobPosting).filter(
+        FactJobPosting.job_posting_id == job_id
+    ).first()
+
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    return job
 
 
 @app.get("/aggregations/by-company", response_model=List[JobAggregation])
