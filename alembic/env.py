@@ -15,10 +15,12 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 # Build the database URL from individual env vars (matches src/database/config.py).
-# Falls back to alembic.ini sqlalchemy.url if env vars are absent.
+# Requires POSTGRES_PASSWORD to be set in environment.
 def get_url() -> str:
     user = os.getenv("POSTGRES_USER", "jobs_admin")
-    pw = os.getenv("POSTGRES_PASSWORD", "localdev123")
+    pw = os.getenv("POSTGRES_PASSWORD")
+    if not pw:
+        raise RuntimeError("POSTGRES_PASSWORD must be set in environment")
     host = os.getenv("POSTGRES_HOST", "localhost")
     port = os.getenv("POSTGRES_PORT", "5432")
     db = os.getenv("POSTGRES_DB", "uae_jobs")
