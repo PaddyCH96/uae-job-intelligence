@@ -19,14 +19,18 @@ import uuid
 
 import pytest
 
+# Test database URL - requires POSTGRES_PASSWORD to be set in env for test DB
 TEST_DATABASE_URL = os.getenv(
     "TEST_DATABASE_URL",
-    "postgresql://jobs_admin:localdev123@localhost:5432/uae_jobs_test",
+    "postgresql://jobs_admin:${POSTGRES_PASSWORD}@localhost:5432/uae_jobs_test",
 )
 
 # Point the application settings at the test DB *before* any src.database import,
 # because src/database/config.py builds a module-level engine at import time.
-_parsed = TEST_DATABASE_URL.replace("postgresql://", "")
+# Expand any environment variables in TEST_DATABASE_URL
+TEST_DATABASE_URL_EXPANDED = os.path.expandvars(TEST_DATABASE_URL)
+
+_parsed = TEST_DATABASE_URL_EXPANDED.replace("postgresql://", "")
 _creds, _hostpart = _parsed.split("@", 1)
 _user, _pw = _creds.split(":", 1)
 _hostport, _dbname = _hostpart.split("/", 1)
@@ -42,7 +46,7 @@ def _db_available() -> bool:
     try:
         import sqlalchemy
 
-        eng = sqlalchemy.create_engine(TEST_DATABASE_URL)
+        eng = sqlalchemy.create_engine(TEST_DATABASE_URL_EXPANDED)
         with eng.connect() as conn:
             conn.execute(sqlalchemy.text("SELECT 1"))
         eng.dispose()
@@ -72,7 +76,7 @@ def db_session(requires_db):
     import sqlalchemy
     from sqlalchemy.orm import sessionmaker
 
-    engine = sqlalchemy.create_engine(TEST_DATABASE_URL)
+    engine = sqlalchemy.create_engine(TEST_DATABASE_URL_EXPANDED)
     Session = sessionmaker(bind=engine)
     session = Session()
     try:
