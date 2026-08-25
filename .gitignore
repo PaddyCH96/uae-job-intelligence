@@ -73,3 +73,7 @@ htmlcov/
 
 # Prefect
 .prefect/
+
+# ML Models
+models/*.pkl
+models/*.joblib
