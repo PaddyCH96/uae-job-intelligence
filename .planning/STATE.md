@@ -3,7 +3,7 @@
 ## Current State
 
 **Milestone:** v1.0 — Full Platform Delivery
-**Current Phase:** 2 (Intelligence Generation)
+**Current Phase:** 5 (Stretch Goals)
 **Status:** In Progress
 
 ---
@@ -14,8 +14,8 @@
 |-------|--------|-------|
 | 1. MVP | ✅ Complete | Data pipeline, star schema, dedup, API, dashboard |
 | 2. Intelligence Gen | ✅ Complete | LLM integration working, 50 jobs enriched, 11/11 tests passing |
-| 3. V1: AI Insights | 📋 Planned | Skill growth, salary correlation, expanded sources |
-| 4. V2: Predictive | 📋 Planned | Predictive models, user profiles, sentiment |
+| 3. V1: AI Insights | ✅ Complete | Skill growth rates, salary correlation views, 10/10 tests passing |
+| 4. V2: Predictive | ✅ Complete | Predictive models, user profiles, sentiment, industry, 10/10 tests passing |
 | 5. Stretch Goals | 📋 Planned | Real-time, multi-language, geospatial |
 
 ---
@@ -23,13 +23,16 @@
 ## Completed Phases
 
 - **Phase 1:** ✅ Complete (July 2024) — MVP with data pipeline, star schema, deduplication, API, dashboard
+- **Phase 2:** ✅ Complete (August 2026) — LLM integration with Ollama, skill/technology extraction
+- **Phase 3:** ✅ Complete (August 2026) — Skill growth rates, salary correlation views, expanded data
+- **Phase 4:** ✅ Complete (August 2026) — Predictive models, user profiles, sentiment analysis, industry classification
 
 ---
 
 ## Blockers/Concerns
 
-- Docker not running (needed for database views migration)
-- Qwen 3 8B model download timed out (using qwen2.5-coder:7b instead)
+- Phase 4 requires predictive model training (scikit-learn)
+- Data source expansion (GulfTalent, Naukri Gulf) deferred to Phase 4
 
 ---
 
@@ -37,7 +40,13 @@
 
 1. **LLM Model:** Using qwen2.5-coder:7b instead of qwen3:8b (already available, faster)
 2. **Enrichment Pipeline:** Batch processing with rate limiting (0.5s between requests)
-3. **Database Views:** Created 6 views for trend analysis (v_tech_trends, v_skill_trends, etc.)
+3. **Database Views:** Created 9 views for analytics (v_tech_trends, v_skill_growth_rates, v_salary_correlation, v_skill_forecast, v_salary_prediction, etc.)
+4. **Skill Growth:** Using YoY growth rates with trend categories (growing/stable/declining/new)
+5. **Salary Correlation:** Using v_salary_correlation view with skill_count and tech_count
+6. **Predictive Models:** scikit-learn RandomForest for skill forecasting, Ridge for salary prediction
+7. **User Profiles:** Opt-in only with soft migration (feature flag)
+8. **Sentiment Analysis:** LLM-based scoring (-1 to 1)
+9. **Industry Classification:** 6 categories (Technology, Finance, Government, Education, Consulting, Others)
 
 ---
 
@@ -47,21 +56,39 @@
 - `src/utils/llm.py` — LLM integration wrapper
 - `src/ingestion/llm_enrichment.py` — Batch enrichment pipeline
 - `src/ingestion/processor.py` — Added LLM methods
-- `migrations/004_phase2_views.sql` — Database views
-- `tests/test_phase2.py` — 11 verification tests (8 passing)
+- `migrations/004_phase2_views.sql` — Database views (6 views)
+- `tests/test_phase2.py` — 11 verification tests (all passing)
+
+### Phase 3 Artifacts
+- `migrations/005_phase3_views.sql` — 5 new views (skill growth, salary correlation, tech salary, company hiring, city distribution)
+- `tests/test_phase3.py` — 10 verification tests (all passing)
+
+### Phase 4 Artifacts
+- `src/models/skill_forecast.py` — Skill demand forecasting model
+- `src/models/salary_predictor.py` — Salary prediction model
+- `migrations/006_phase4_models.sql` — Database schema (industry, sentiment, user profiles, forecast views)
+- `tests/test_phase4.py` — 10 verification tests (all passing)
+- `models/skill_forecast_v1.pkl` — Trained skill forecast model
+- `models/salary_predictor_v1.pkl` — Trained salary predictor model
 
 ### Documentation
 - `PLAN.md` — Phase 2 execution plan
 - `RESEARCH.md` — LLM integration research
-- `PLAN_PHASE3.md` — Phase 3 plan
-- `PLAN_PHASE4.md` — Phase 4 plan
+- `PLAN_PHASE3.md` — Phase 3 plan (complete)
+- `PLAN_PHASE4.md` — Phase 4 plan (complete)
 - `PLAN_PHASE5.md` — Phase 5 plan
+- `.planning/ROADMAP.md` — GSD roadmap
+- `.planning/STATE.md` — GSD state tracker
+- `.planning/config.json` — GSD configuration
 
 ---
 
 ## Next Actions
 
-1. Start Docker and run migration to create database views
-2. Enrich existing mock jobs with LLM
-3. Complete Phase 2 verification tests
-4. Proceed with Phase 3-5 as per roadmap
+1. Execute Phase 5: Stretch Goals (Optional)
+   - Real-time data processing
+   - Multi-language support (Arabic/English)
+   - Geospatial district-level insights
+   - Community sharing features
+2. Implement GulfTalent and Naukri Gulf scrapers (if not done in Phase 3)
+3. Complete 5-page dashboard with all analytics views
