@@ -18,6 +18,7 @@ from src.database import (
 )
 from src.utils.logger import logger
 from src.utils.text import normalize_text, clean_html, compute_content_hash, extract_salary_range
+from src.utils.llm import extract_skills, extract_technologies, check_ollama_health
 
 
 class JobProcessor:
@@ -272,3 +273,84 @@ class JobProcessor:
 
         self.logger.info("processing_completed", success=processed_count, total=len(unprocessed_jobs))
         return processed_count
+
+    def enrich_job_with_llm(self, db: Session, job: FactJobPosting) -> bool:
+        """
+        Enrich a job posting with LLM-extracted skills and technologies.
+
+        Args:
+            db: Database session
+            job: FactJobPosting instance
+
+        Returns:
+            True if enrichment successful, False otherwise
+        """
+        if not check_ollama_health():
+            self.logger.warning("ollama_not_available")
+            return False
+
+        description = job.job_description or ""
+        if not description:
+            return False
+
+        try:
+            # Extract skills
+            skills = extract_skills(description)
+            job.extracted_skills = skills
+
+            # Extract technologies
+            technologies = extract_technologies(description)
+            job.extracted_technologies = technologies
+
+            job.updated_at = datetime.utcnow()
+            db.commit()
+
+            self.logger.info(
+                "job_enriched",
+                job_id=str(job.job_posting_id),
+                skills_count=len(skills),
+                tech_count=len(technologies),
+            )
+            return True
+
+        except Exception as e:
+            db.rollback()
+            self.logger.error(
+                "enrichment_failed",
+                job_id=str(job.job_posting_id),
+                error=str(e),
+            )
+            return False
+
+    def enrich_unprocessed_jobs(self, limit: int = 50) -> int:
+        """
+        Enrich jobs that don't have extracted skills/technologies.
+
+        Args:
+            limit: Maximum number of jobs to enrich
+
+        Returns:
+            Number of jobs enriched successfully
+        """
+        enriched_count = 0
+
+        with get_db_context() as db:
+            unenriched_jobs = (
+                db.query(FactJobPosting)
+                .filter(
+                    FactJobPosting.extracted_skills.is_(None),
+                    FactJobPosting.is_active == True,
+                )
+                .limit(limit)
+                .all()
+            )
+
+            self.logger.info("enriching_jobs", count=len(unenriched_jobs))
+
+            for job in unenriched_jobs:
+                success = self.enrich_job_with_llm(db, job)
+                if success:
+                    enriched_count += 1
+
+        self.logger.info("enrichment_completed", success=enriched_count, total=len(unenriched_jobs))
+        return enriched_count
