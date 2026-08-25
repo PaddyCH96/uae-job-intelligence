@@ -265,7 +265,7 @@ docker compose logs -f
 docker compose logs --tail=100
 
 # Since timestamp
-docker compose logs --since 2024-07-03T10:00:00
+docker compose logs --since 2026-07-03T10:00:00
 ```
 
 ### Resource Usage

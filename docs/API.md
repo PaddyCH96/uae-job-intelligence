@@ -15,7 +15,7 @@ Returns API health status.
 
 ### Get Jobs
 ```http
-GET /jobs?skip=0&limit=100&company_name=Emirates&city=Dubai&min_salary=15000&remote_only=true&visa_sponsorship=true&posted_after=2024-01-01
+GET /jobs?skip=0&limit=100&company_name=Emirates&city=Dubai&min_salary=15000&remote_only=true&visa_sponsorship=true&posted_after=2026-01-01
 ```
 
 **Query Parameters:**
@@ -35,7 +35,7 @@ GET /jobs?skip=0&limit=100&company_name=Emirates&city=Dubai&min_salary=15000&rem
     "job_posting_id": "uuid",
     "job_title": "Data Engineer",
     "job_description": "...",
-    "posted_date": "2024-07-03",
+    "posted_date": "2026-07-03",
     "salary_min": 15000,
     "salary_max": 25000,
     "remote_allowed": true,
