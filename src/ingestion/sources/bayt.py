@@ -453,7 +453,7 @@ def _parse_date(raw: str) -> str:
     """Best-effort ISO-8601 date string from *raw* text.
 
     Handles:
-    - ISO strings already ("2024-05-01", "2024-05-01T12:00:00Z")
+    - ISO strings already ("2026-05-01", "2026-05-01T12:00:00Z")
     - Relative strings ("2 days ago", "1 week ago", "1 month ago")
     Returns empty string on failure.
     """
