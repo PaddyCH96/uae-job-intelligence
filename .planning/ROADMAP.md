@@ -44,6 +44,14 @@
 - **Completed:** August 2026
 - **Reference:** PLAN_PHASE5.md, tests/test_phase5.py
 
+### Phase 6: Automated Job Intelligence & Career Assistant
+- **Status:** 📋 Planned
+- **Goal:** Daily automated scraping, top 10 job recommendations, ATS keyword extraction, company contact enrichment
+- **Success Criteria:** Daily scrape at 6 AM UAE time, ATS keywords for 90%+ jobs, contact enrichment for 20%+ companies, top 10 recommendations generated daily
+- **Planned:** September 2026
+- **Reference:** .planning/phases/006/006-CONTEXT.md, .planning/phases/006/006-PLAN.md
+- **Cost:** $0 (completely free)
+
 ---
 
 ## Phase Dependencies

@@ -486,6 +486,24 @@ def main():
 
     st.divider()
 
+    st.header("🎯 Job Recommendations")
+    from src.dashboard.pages.recommendations import render_recommendations
+    render_recommendations()
+
+    st.divider()
+
+    st.header("🔑 ATS Keyword Intelligence")
+    from src.dashboard.pages.ats_keywords import render_ats_keywords
+    render_ats_keywords()
+
+    st.divider()
+
+    st.header("🏢 Company Contacts")
+    from src.dashboard.pages.contacts import render_contacts
+    render_contacts()
+
+    st.divider()
+
     display_job_table()
 
     # Footer
