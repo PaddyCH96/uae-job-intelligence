@@ -370,6 +370,30 @@ def display_job_table():
     """Display job listings table with filters."""
     st.subheader("Job Listings")
 
+    # Run Scraper Button
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        if st.button("🔄 Run Job Scraper", type="primary"):
+            with st.spinner("Running scraper..."):
+                try:
+                    import subprocess
+                    result = subprocess.run(
+                        ["python", "-m", "src.ingestion.main", "--source", "rapidapi"],
+                        capture_output=True,
+                        text=True,
+                        timeout=60
+                    )
+                    if result.returncode == 0:
+                        st.success("✅ Scraper completed successfully!")
+                        st.rerun()
+                    else:
+                        st.error(f"❌ Scraper failed: {result.stderr[:200]}")
+                except Exception as e:
+                    st.error(f"❌ Error running scraper: {e}")
+    
+    with col2:
+        st.info("💡 Click to scrape latest jobs from LinkedIn via RapidAPI")
+
     # Filters in sidebar
     with st.sidebar:
         st.header("Filters")
@@ -420,7 +444,8 @@ def display_job_table():
             "salary_range",
             "extracted_skills",
             "remote_allowed",
-            "visa_sponsorship"
+            "visa_sponsorship",
+            "url"
         ]
 
         available_cols = [col for col in display_cols if col in df.columns]
@@ -429,6 +454,12 @@ def display_job_table():
         if "extracted_skills" in df.columns:
             df["extracted_skills"] = df["extracted_skills"].apply(
                 lambda x: ", ".join(x) if isinstance(x, list) else str(x) if x else "N/A"
+            )
+        
+        # Format URL as clickable link
+        if "url" in df.columns:
+            df["url"] = df["url"].apply(
+                lambda x: f"[Apply]({x})" if x and x != "None" else "N/A"
             )
 
         st.dataframe(
