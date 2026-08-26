@@ -28,6 +28,12 @@ try:
 except ImportError:
     _NAUKRIGULF_AVAILABLE = False
 
+try:
+    from src.ingestion.sources.rapidapi_linkedin import RapidAPILinkedInScraper
+    _RAPIDAPI_AVAILABLE = True
+except ImportError:
+    _RAPIDAPI_AVAILABLE = False
+
 
 def _make_source(name: str):
     """Instantiate a source by name. Returns None if source is unavailable."""
@@ -48,6 +54,11 @@ def _make_source(name: str):
             logger.warning("naukrigulf_source_unavailable", reason="module not found")
             return None
         return NaukriGulfSource()
+    if name == "rapidapi":
+        if not _RAPIDAPI_AVAILABLE:
+            logger.warning("rapidapi_source_unavailable", reason="module not found")
+            return None
+        return RapidAPILinkedInScraper()
     return None
 
 
@@ -56,10 +67,11 @@ AVAILABLE_SOURCES = {
     "bayt": lambda: _make_source("bayt"),
     "gulftalent": lambda: _make_source("gulftalent"),
     "naukrigulf": lambda: _make_source("naukrigulf"),
+    "rapidapi": lambda: _make_source("rapidapi"),
     "all": None,  # special: run all real sources
 }
 
-REAL_SOURCES = ["bayt", "gulftalent", "naukrigulf"]
+REAL_SOURCES = ["bayt", "gulftalent", "naukrigulf", "rapidapi"]
 
 
 def run_ingestion(

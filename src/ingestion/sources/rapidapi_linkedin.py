@@ -18,6 +18,42 @@ class RapidAPILinkedInScraper:
             "X-RapidAPI-Host": "linkedin-data-api.p.rapidapi.com"
         }
     
+    def fetch_and_transform(self, max_pages: int = 1) -> list[dict]:
+        """
+        Fetch and transform jobs (compatible with ingestion pipeline).
+        
+        Args:
+            max_pages: Number of keyword searches to perform
+            
+        Returns:
+            List of normalized job dictionaries
+        """
+        import asyncio
+        
+        keywords = ["data engineer", "data analyst", "machine learning", "python developer"]
+        keywords = keywords[:max_pages]  # Limit based on max_pages
+        
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        try:
+            jobs = loop.run_until_complete(
+                self._search_all_keywords(keywords)
+            )
+            return jobs
+        finally:
+            loop.close()
+    
+    async def _search_all_keywords(self, keywords: list[str]) -> list[dict]:
+        """Search for jobs using multiple keywords."""
+        all_jobs = []
+        
+        for keyword in keywords:
+            jobs = await self.search_jobs(keywords=keyword)
+            all_jobs.extend(jobs)
+        
+        return all_jobs
+    
     async def search_jobs(
         self, 
         keywords: str = "data engineer",
