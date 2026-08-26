@@ -100,7 +100,7 @@ def render_ats_keywords():
         st.subheader("Certifications")
         
         cert_counts = pd.Series(all_certifications).value_counts().head(10)
-        st.dataframe(cert_counts.reset_index().rename(columns={0: 'Count', 'index: 'Certification'}))
+        st.dataframe(cert_counts.reset_index().rename(columns={0: 'Count', 'index': 'Certification'}))
     
     # ATS Tips
     st.subheader("💡 ATS Optimization Tips")
