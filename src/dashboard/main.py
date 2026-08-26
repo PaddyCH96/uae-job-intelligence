@@ -1,12 +1,16 @@
 """Streamlit dashboard for UAE Job Intelligence Platform."""
 
 import os
+import sys
 import requests
 from typing import Dict, List
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
+
+# Add src to path for imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 # Configuration
 API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
@@ -487,20 +491,32 @@ def main():
     st.divider()
 
     st.header("🎯 Job Recommendations")
-    from src.dashboard.pages.recommendations import render_recommendations
-    render_recommendations()
+    try:
+        from src.dashboard.pages.recommendations import render_recommendations
+        render_recommendations()
+    except Exception as e:
+        st.error(f"Failed to load recommendations: {e}")
+        st.info("Make sure all Phase 6 dependencies are installed.")
 
     st.divider()
 
     st.header("🔑 ATS Keyword Intelligence")
-    from src.dashboard.pages.ats_keywords import render_ats_keywords
-    render_ats_keywords()
+    try:
+        from src.dashboard.pages.ats_keywords import render_ats_keywords
+        render_ats_keywords()
+    except Exception as e:
+        st.error(f"Failed to load ATS keywords: {e}")
+        st.info("Make sure all Phase 6 dependencies are installed.")
 
     st.divider()
 
     st.header("🏢 Company Contacts")
-    from src.dashboard.pages.contacts import render_contacts
-    render_contacts()
+    try:
+        from src.dashboard.pages.contacts import render_contacts
+        render_contacts()
+    except Exception as e:
+        st.error(f"Failed to load contacts: {e}")
+        st.info("Make sure all Phase 6 dependencies are installed.")
 
     st.divider()
 

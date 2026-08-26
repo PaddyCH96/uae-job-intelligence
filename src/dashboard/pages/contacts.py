@@ -1,8 +1,18 @@
 """Contacts Dashboard Page - Display company contacts directory."""
 
+import os
+import sys
 import streamlit as st
 import pandas as pd
-from src.api.main import fetch_jobs, fetch_aggregation
+
+# Add src to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+
+try:
+    from src.api.main import fetch_jobs
+except ImportError:
+    def fetch_jobs(limit=100):
+        return []
 
 
 def render_contacts():

@@ -1,9 +1,25 @@
 """Recommendations Dashboard Page - Display top 10 job recommendations."""
 
+import os
+import sys
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-from src.api.main import fetch_jobs, fetch_aggregation
+
+# Add src to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+
+try:
+    from src.api.main import fetch_jobs
+except ImportError:
+    # Fallback for Docker environment
+    def fetch_jobs(limit=100):
+        return []
+
+try:
+    from src.intelligence.recommendations.engine import RecommendationEngine
+except ImportError:
+    RecommendationEngine = None
 
 
 def render_recommendations():
@@ -16,8 +32,9 @@ def render_recommendations():
     """)
     
     # Get recommendations
-    # For now, use the job ranking engine directly
-    from src.intelligence.recommendations.engine import RecommendationEngine
+    if RecommendationEngine is None:
+        st.error("Recommendation engine not available. Please install dependencies.")
+        return
     
     engine = RecommendationEngine()
     jobs = fetch_jobs(limit=100)

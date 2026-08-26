@@ -1,9 +1,19 @@
 """ATS Keywords Dashboard Page - Display ATS keyword intelligence."""
 
+import os
+import sys
 import streamlit as st
 import plotly.express as px
 import pandas as pd
-from src.api.main import fetch_jobs, fetch_aggregation
+
+# Add src to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+
+try:
+    from src.api.main import fetch_jobs
+except ImportError:
+    def fetch_jobs(limit=100):
+        return []
 
 
 def render_ats_keywords():
