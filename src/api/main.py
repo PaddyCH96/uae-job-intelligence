@@ -1,6 +1,7 @@
 """FastAPI backend for UAE Job Intelligence Platform."""
 
 import os
+import json
 from typing import List, Optional
 from datetime import date
 from uuid import UUID
@@ -10,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
+import sqlalchemy
 
 from src.database import get_db, FactJobPosting, DimCompany, DimLocation
 from src.api.schemas import (
@@ -500,6 +502,286 @@ def get_stats(request: Request, db: Session = Depends(get_db)):
         "visa_sponsorship_jobs": visa_jobs,
         "deduplication_rate": round(duplicate_jobs / total_jobs * 100, 2) if total_jobs > 0 else 0
     }
+
+
+# Phase 6 Endpoints: ATS Keywords, Contacts, Recommendations
+
+@app.get("/jobs/{job_id}/ats-keywords")
+async def get_job_ats_keywords(job_id: UUID, db: Session = Depends(get_db)):
+    """Get ATS keywords for a specific job."""
+    result = db.execute(
+        sqlalchemy.text("""
+            SELECT * FROM analytics.fact_job_ats_keywords 
+            WHERE job_posting_id = :job_id
+        """),
+        {"job_id": str(job_id)}
+    )
+    row = result.fetchone()
+    if not row:
+        return {"message": "No ATS keywords found", "keywords": {}}
+    return {
+        "job_id": str(row.job_posting_id),
+        "hard_skills": row.hard_skills or [],
+        "soft_skills": row.soft_skills or [],
+        "action_verbs": row.action_verbs or [],
+        "certifications": row.certifications or [],
+        "industry_terms": row.industry_terms or []
+    }
+
+
+@app.post("/jobs/{job_id}/ats-keywords")
+async def extract_job_ats_keywords(job_id: UUID, db: Session = Depends(get_db)):
+    """Extract and store ATS keywords for a job."""
+    from src.intelligence.llm.ats_extractor import ATSKeywordExtractor
+    
+    # Get job details
+    result = db.execute(
+        sqlalchemy.text("""
+            SELECT job_title, job_description, company_id 
+            FROM analytics.fact_job_posting 
+            WHERE job_posting_id = :job_id
+        """),
+        {"job_id": str(job_id)}
+    )
+    job = result.fetchone()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    # Get company name
+    company_result = db.execute(
+        sqlalchemy.text("SELECT company_name FROM analytics.dim_company WHERE company_id = :id"),
+        {"id": job.company_id}
+    )
+    company = company_result.fetchone()
+    
+    extractor = ATSKeywordExtractor()
+    keywords = await extractor.extract({
+        "title": job.job_title,
+        "company_name": company.company_name if company else "",
+        "description": job.job_description
+    })
+    
+    # Store keywords
+    db.execute(
+        sqlalchemy.text("""
+            INSERT INTO analytics.fact_job_ats_keywords (job_posting_id, hard_skills, soft_skills, action_verbs, certifications, industry_terms)
+            VALUES (:job_id, :hard_skills, :soft_skills, :action_verbs, :certifications, :industry_terms)
+            ON CONFLICT (job_posting_id) DO UPDATE SET
+                hard_skills = EXCLUDED.hard_skills,
+                soft_skills = EXCLUDED.soft_skills,
+                action_verbs = EXCLUDED.action_verbs,
+                certifications = EXCLUDED.certifications,
+                industry_terms = EXCLUDED.industry_terms
+        """),
+        {
+            "job_id": str(job_id),
+            "hard_skills": json.dumps(keywords.get("hard_skills", [])),
+            "soft_skills": json.dumps(keywords.get("soft_skills", [])),
+            "action_verbs": json.dumps(keywords.get("action_verbs", [])),
+            "certifications": json.dumps(keywords.get("certifications", [])),
+            "industry_terms": json.dumps(keywords.get("industry_terms", []))
+        }
+    )
+    db.commit()
+    
+    return {"message": "ATS keywords extracted", "keywords": keywords}
+
+
+@app.get("/companies/{company_id}/contacts")
+async def get_company_contacts(company_id: UUID, db: Session = Depends(get_db)):
+    """Get contacts for a company."""
+    result = db.execute(
+        sqlalchemy.text("""
+            SELECT * FROM analytics.dim_company_contacts 
+            WHERE company_id = :company_id
+        """),
+        {"company_id": str(company_id)}
+    )
+    contacts = result.fetchall()
+    return [
+        {
+            "id": str(c.id),
+            "name": c.contact_name,
+            "email": c.email,
+            "confidence": float(c.email_confidence) if c.email_confidence else 0,
+            "linkedin": c.linkedin_url,
+            "position": c.position,
+            "source": c.source
+        }
+        for c in contacts
+    ]
+
+
+@app.get("/recommendations")
+async def get_recommendations(user_id: str = "default", limit: int = 10, db: Session = Depends(get_db)):
+    """Get job recommendations for a user."""
+    result = db.execute(
+        sqlalchemy.text("""
+            SELECT r.*, j.job_title, j.company_id, l.city, j.salary_min, j.salary_max, 
+                   rj.raw_data->>'url' as url
+            FROM analytics.job_recommendations r
+            JOIN analytics.fact_job_posting j ON r.job_posting_id = j.job_posting_id
+            LEFT JOIN analytics.dim_location l ON j.location_id = l.location_id
+            LEFT JOIN raw_data.job_postings rj ON j.raw_job_id = rj.id
+            WHERE r.user_id = :user_id 
+            AND r.expires_at > CURRENT_TIMESTAMP
+            ORDER BY r.score DESC
+            LIMIT :limit
+        """),
+        {"user_id": user_id, "limit": limit}
+    )
+    recs = result.fetchall()
+    
+    recommendations = []
+    for rec in recs:
+        # Get company name
+        company_result = db.execute(
+            sqlalchemy.text("SELECT company_name FROM analytics.dim_company WHERE company_id = :id"),
+            {"id": rec.company_id}
+        )
+        company = company_result.fetchone()
+        
+        recommendations.append({
+            "job_id": str(rec.job_posting_id),
+            "title": rec.job_title,
+            "company_name": company.company_name if company else "Unknown",
+            "city": rec.city,
+            "salary_range": f"AED {rec.salary_min:,.0f} - {rec.salary_max:,.0f}" if rec.salary_min and rec.salary_max else "Not specified",
+            "score": float(rec.score),
+            "url": rec.url
+        })
+    
+    return recommendations
+
+
+@app.post("/recommendations/generate")
+async def generate_recommendations(user_id: str = "default", db: Session = Depends(get_db)):
+    """Generate new recommendations for a user."""
+    from src.intelligence.recommendations.engine import RecommendationEngine
+    
+    engine = RecommendationEngine()
+    
+    # Get recent jobs
+    result = db.execute(
+        sqlalchemy.text("""
+            SELECT j.*, c.company_name, l.city, rj.raw_data->>'url' as url
+            FROM analytics.fact_job_posting j
+            LEFT JOIN analytics.dim_company c ON j.company_id = c.company_id
+            LEFT JOIN analytics.dim_location l ON j.location_id = l.location_id
+            LEFT JOIN raw_data.job_postings rj ON j.raw_job_id = rj.id
+            WHERE j.is_active = true AND j.is_duplicate = false
+            ORDER BY j.posted_date DESC
+            LIMIT 100
+        """)
+    )
+    jobs = result.fetchall()
+    
+    if not jobs:
+        return {"message": "No jobs available for recommendations"}
+    
+    # Convert to dict format
+    jobs_dict = []
+    for job in jobs:
+        jobs_dict.append({
+            "job_posting_id": str(job.job_posting_id),
+            "title": job.job_title,
+            "company_name": job.company_name,
+            "city": job.city,
+            "salary_min": float(job.salary_min) if job.salary_min else None,
+            "salary_max": float(job.salary_max) if job.salary_max else None,
+            "posted_date": job.posted_date.isoformat() if job.posted_date else None,
+            "url": job.url,
+            "extracted_skills": []  # Would need to join with skills table
+        })
+    
+    # Default user profile
+    user_profile = {
+        "skills": ["Python", "SQL", "Data Analysis"],
+        "experience_years": 3,
+        "expected_salary_min": 15000,
+        "expected_salary_max": 30000,
+        "preferred_cities": ["Dubai", "Abu Dhabi"]
+    }
+    
+    # Get recommendations
+    top_10 = engine.rank_jobs(jobs_dict, user_profile)
+    
+    # Store recommendations
+    for i, rec in enumerate(top_10, 1):
+        db.execute(
+            sqlalchemy.text("""
+                INSERT INTO analytics.job_recommendations (user_id, job_posting_id, score, rank, expires_at)
+                VALUES (:user_id, :job_id, :score, :rank, CURRENT_TIMESTAMP + INTERVAL '1 day')
+            """),
+            {
+                "user_id": user_id,
+                "job_id": rec["job_posting_id"],
+                "score": rec["score"],
+                "rank": i
+            }
+        )
+    
+    db.commit()
+    return {"message": f"Generated {len(top_10)} recommendations", "count": len(top_10)}
+
+
+@app.post("/enrich/batch-ats")
+async def batch_enrich_ats_keywords(limit: int = 10, db: Session = Depends(get_db)):
+    """Batch extract ATS keywords for multiple jobs."""
+    from src.intelligence.llm.ats_extractor import ATSKeywordExtractor
+    
+    extractor = ATSKeywordExtractor()
+    
+    # Get jobs without ATS keywords
+    result = db.execute(
+        sqlalchemy.text("""
+            SELECT j.job_posting_id, j.job_title, j.job_description, j.company_id
+            FROM analytics.fact_job_posting j
+            LEFT JOIN analytics.fact_job_ats_keywords a ON j.job_posting_id = a.job_posting_id
+            WHERE a.id IS NULL AND j.is_active = true
+            LIMIT :limit
+        """),
+        {"limit": limit}
+    )
+    jobs = result.fetchall()
+    
+    enriched = 0
+    for job in jobs:
+        try:
+            # Get company name
+            company_result = db.execute(
+                sqlalchemy.text("SELECT company_name FROM analytics.dim_company WHERE company_id = :id"),
+                {"id": job.company_id}
+            )
+            company = company_result.fetchone()
+            
+            keywords = await extractor.extract({
+                "title": job.job_title,
+                "company_name": company.company_name if company else "",
+                "description": job.job_description
+            })
+            
+            db.execute(
+                sqlalchemy.text("""
+                    INSERT INTO analytics.fact_job_ats_keywords (job_posting_id, hard_skills, soft_skills, action_verbs, certifications, industry_terms)
+                    VALUES (:job_id, :hard_skills, :soft_skills, :action_verbs, :certifications, :industry_terms)
+                """),
+                {
+                    "job_id": str(job.job_posting_id),
+                    "hard_skills": json.dumps(keywords.get("hard_skills", [])),
+                    "soft_skills": json.dumps(keywords.get("soft_skills", [])),
+                    "action_verbs": json.dumps(keywords.get("action_verbs", [])),
+                    "certifications": json.dumps(keywords.get("certifications", [])),
+                    "industry_terms": json.dumps(keywords.get("industry_terms", []))
+                }
+            )
+            enriched += 1
+        except Exception as e:
+            logger.error(f"Failed to enrich job {job.job_posting_id}: {e}")
+            continue
+    
+    db.commit()
+    return {"message": f"Enriched {enriched} jobs with ATS keywords", "count": enriched}
 
 
 if __name__ == "__main__":
