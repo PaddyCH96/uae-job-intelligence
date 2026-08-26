@@ -17,7 +17,7 @@
 | 3. V1: AI Insights | ✅ Complete | Skill growth rates, salary correlation views, 10/10 tests passing |
 | 4. V2: Predictive | ✅ Complete | Predictive models, user profiles, sentiment, industry, 10/10 tests passing |
 | 5. Stretch Goals | ✅ Complete | Real-time, multi-language, geospatial, community, MLOps, 10/10 tests passing |
-| 6. Automated Intelligence | 📋 Planned | Daily scraping, ATS keywords, contact enrichment, recommendations |
+| 6. Automated Intelligence | 🔄 In Progress | Daily scraping, ATS keywords, contact enrichment, recommendations |
 
 ---
 
