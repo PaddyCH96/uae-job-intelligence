@@ -342,6 +342,115 @@ def aggregate_by_city(
     return [JobAggregation(name=r.name, count=r.count) for r in results]
 
 
+@app.get("/aggregations/by-skill", response_model=List[JobAggregation])
+@limiter.limit(RATE_LIMIT_DEFAULT) if limiter else lambda x: x
+def aggregate_by_skill(
+    request: Request,
+    limit: int = Query(20, ge=1, le=MAX_AGGREGATION_LIMIT),
+    db: Session = Depends(get_db)
+):
+    """
+    Aggregate job counts by extracted skill.
+
+    Args:
+        limit: Number of top skills to return
+        db: Database session
+
+    Returns:
+        List of skills with job counts
+    """
+    results = db.query(
+        func.jsonb_array_elements_text(FactJobPosting.extracted_skills).label("name"),
+        func.count(FactJobPosting.job_posting_id).label("count")
+    ).filter(
+        and_(
+            FactJobPosting.is_active == True,
+            FactJobPosting.is_duplicate == False,
+            FactJobPosting.extracted_skills.isnot(None),
+            FactJobPosting.extracted_skills != '[]'
+        )
+    ).group_by(
+        func.jsonb_array_elements_text(FactJobPosting.extracted_skills)
+    ).order_by(
+        func.count(FactJobPosting.job_posting_id).desc()
+    ).limit(limit).all()
+
+    return [JobAggregation(name=r.name, count=r.count) for r in results]
+
+
+@app.get("/aggregations/by-technology", response_model=List[JobAggregation])
+@limiter.limit(RATE_LIMIT_DEFAULT) if limiter else lambda x: x
+def aggregate_by_technology(
+    request: Request,
+    limit: int = Query(20, ge=1, le=MAX_AGGREGATION_LIMIT),
+    db: Session = Depends(get_db)
+):
+    """
+    Aggregate job counts by extracted technology.
+
+    Args:
+        limit: Number of top technologies to return
+        db: Database session
+
+    Returns:
+        List of technologies with job counts
+    """
+    results = db.query(
+        func.jsonb_array_elements_text(FactJobPosting.extracted_technologies).label("name"),
+        func.count(FactJobPosting.job_posting_id).label("count")
+    ).filter(
+        and_(
+            FactJobPosting.is_active == True,
+            FactJobPosting.is_duplicate == False,
+            FactJobPosting.extracted_technologies.isnot(None),
+            FactJobPosting.extracted_technologies != '[]'
+        )
+    ).group_by(
+        func.jsonb_array_elements_text(FactJobPosting.extracted_technologies)
+    ).order_by(
+        func.count(FactJobPosting.job_posting_id).desc()
+    ).limit(limit).all()
+
+    return [JobAggregation(name=r.name, count=r.count) for r in results]
+
+
+@app.get("/aggregations/by-industry", response_model=List[JobAggregation])
+@limiter.limit(RATE_LIMIT_DEFAULT) if limiter else lambda x: x
+def aggregate_by_industry(
+    request: Request,
+    limit: int = Query(20, ge=1, le=MAX_AGGREGATION_LIMIT),
+    db: Session = Depends(get_db)
+):
+    """
+    Aggregate job counts by industry.
+
+    Args:
+        limit: Number of top industries to return
+        db: Database session
+
+    Returns:
+        List of industries with job counts
+    """
+    results = db.query(
+        DimCompany.industry.label("name"),
+        func.count(FactJobPosting.job_posting_id).label("count")
+    ).join(
+        FactJobPosting
+    ).filter(
+        and_(
+            FactJobPosting.is_active == True,
+            FactJobPosting.is_duplicate == False,
+            DimCompany.industry.isnot(None)
+        )
+    ).group_by(
+        DimCompany.industry
+    ).order_by(
+        func.count(FactJobPosting.job_posting_id).desc()
+    ).limit(limit).all()
+
+    return [JobAggregation(name=r.name, count=r.count) for r in results]
+
+
 @app.get("/stats")
 @limiter.limit(RATE_LIMIT_STATS) if limiter else lambda x: x
 def get_stats(request: Request, db: Session = Depends(get_db)):

@@ -75,7 +75,7 @@ class TestPhase2LLMIntegration:
 class TestPhase2DatabaseEnrichment:
     """Validate that jobs are enriched with extracted skills/technologies."""
 
-    def test_jobs_have_extracted_skills(self, db_session):
+    def test_jobs_have_extracted_skills(self, db_session, seed_enriched_data):
         """Check that enriched jobs have extracted_skills populated."""
         from src.database import FactJobPosting, get_db_context
 
@@ -92,7 +92,7 @@ class TestPhase2DatabaseEnrichment:
             f"Expected >= 1 enriched jobs, got {enriched_skills} out of {total_jobs}"
         )
 
-    def test_jobs_have_extracted_technologies(self, db_session):
+    def test_jobs_have_extracted_technologies(self, db_session, seed_enriched_data):
         """Check that enriched jobs have extracted_technologies populated."""
         from src.database import FactJobPosting, get_db_context
 
@@ -108,7 +108,7 @@ class TestPhase2DatabaseEnrichment:
             f"Expected >= 1 jobs with tech extraction, got {enriched_tech}"
         )
 
-    def test_skills_are_valid_json(self, db_session):
+    def test_skills_are_valid_json(self, db_session, seed_enriched_data):
         """Verify extracted_skills contains valid JSON arrays."""
         from src.database import FactJobPosting, get_db_context
 
@@ -134,7 +134,7 @@ class TestPhase2DatabaseEnrichment:
 class TestPhase2TrendAnalysis:
     """Validate technology trend analysis queries."""
 
-    def test_tech_trends_view_exists(self, db_session):
+    def test_tech_trends_view_exists(self, db_session, seed_enriched_data):
         """Verify the v_tech_trends view exists and is queryable."""
         from src.database import get_db_context
 
@@ -148,7 +148,7 @@ class TestPhase2TrendAnalysis:
             except Exception as e:
                 pytest.fail(f"View v_tech_trends query failed: {e}")
 
-    def test_top_technologies_identified(self, db_session):
+    def test_top_technologies_identified(self, db_session, seed_enriched_data):
         """Check that top technologies are identified from enriched data."""
         from src.database import get_db_context
 
@@ -168,7 +168,7 @@ class TestPhase2TrendAnalysis:
             f"Expected >= 1 distinct technologies, got {result}"
         )
 
-    def test_trend_indicators_present(self, db_session):
+    def test_trend_indicators_present(self, db_session, seed_enriched_data):
         """Verify trend indicators (growing/established/declining) are assigned."""
         from src.database import get_db_context
 
@@ -194,7 +194,7 @@ class TestPhase2TrendAnalysis:
 class TestPhase2DashboardReadiness:
     """Validate that dashboard can read enriched data."""
 
-    def test_dashboard_can_query_enriched_data(self, db_session):
+    def test_dashboard_can_query_enriched_data(self, db_session, seed_enriched_data):
         """Verify dashboard queries work on enriched fact table."""
         from src.database import get_db_context
 
@@ -215,7 +215,7 @@ class TestPhase2DashboardReadiness:
         for row in result:
             assert row[0] is not None, "Job title should not be None"
 
-    def test_aggregations_with_skills(self, db_session):
+    def test_aggregations_with_skills(self, db_session, seed_enriched_data):
         """Verify aggregations can filter by extracted skills."""
         from src.database import get_db_context
 
@@ -236,7 +236,7 @@ class TestPhase2DashboardReadiness:
         assert len(result) >= 1, "Should return at least 1 job record with skills"
 
 
-def test_phase2_success_criteria(db_session):
+def test_phase2_success_criteria(db_session, seed_enriched_data):
     """Aggregate check: all Phase 2 success criteria met."""
     from src.database import FactJobPosting, get_db_context
 

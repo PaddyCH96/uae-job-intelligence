@@ -51,6 +51,8 @@ services:
     environment:
       POSTGRES_HOST: postgres
       PYTHONUNBUFFERED: 1
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       postgres:
         condition: service_healthy
@@ -73,6 +75,8 @@ services:
     environment:
       POSTGRES_HOST: postgres
       PYTHONUNBUFFERED: 1
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "${API_PORT:-8000}:8000"
     depends_on:

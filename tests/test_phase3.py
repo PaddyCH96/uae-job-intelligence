@@ -18,7 +18,7 @@ from sqlalchemy import text
 class TestPhase3SkillGrowth:
     """Validate skill growth rate computation."""
 
-    def test_skill_growth_view_exists(self, db_session):
+    def test_skill_growth_view_exists(self, db_session, seed_enriched_data):
         """Verify the v_skill_growth_rates view exists and is queryable."""
         from src.database import get_db_context
 
@@ -31,7 +31,7 @@ class TestPhase3SkillGrowth:
             except Exception as e:
                 pytest.fail(f"View v_skill_growth_rates query failed: {e}")
 
-    def test_top_skills_identified(self, db_session):
+    def test_top_skills_identified(self, db_session, seed_enriched_data):
         """Check that top skills are identified from enriched data."""
         from src.database import get_db_context
 
@@ -48,7 +48,7 @@ class TestPhase3SkillGrowth:
         # Should identify at least 1 distinct skill
         assert result >= 1, f"Expected >= 1 distinct skills, got {result}"
 
-    def test_trend_categories_assigned(self, db_session):
+    def test_trend_categories_assigned(self, db_session, seed_enriched_data):
         """Verify trend categories (growing/established/new) are assigned."""
         from src.database import get_db_context
 
@@ -72,7 +72,7 @@ class TestPhase3SkillGrowth:
 class TestPhase3SalaryCorrelation:
     """Validate technology-salary correlation."""
 
-    def test_salary_correlation_view_exists(self, db_session):
+    def test_salary_correlation_view_exists(self, db_session, seed_enriched_data):
         """Verify the v_salary_correlation view exists and is queryable."""
         from src.database import get_db_context
 
@@ -85,7 +85,7 @@ class TestPhase3SalaryCorrelation:
             except Exception as e:
                 pytest.fail(f"View v_salary_correlation query failed: {e}")
 
-    def test_tech_salary_avg_view_exists(self, db_session):
+    def test_tech_salary_avg_view_exists(self, db_session, seed_enriched_data):
         """Verify the v_tech_salary_avg view exists and is queryable."""
         from src.database import get_db_context
 
@@ -98,7 +98,7 @@ class TestPhase3SalaryCorrelation:
             except Exception as e:
                 pytest.fail(f"View v_tech_salary_avg query failed: {e}")
 
-    def test_salary_data_available(self, db_session):
+    def test_salary_data_available(self, db_session, seed_enriched_data):
         """Check that salary data is available for correlation analysis."""
         from src.database import get_db_context
 
@@ -122,7 +122,7 @@ class TestPhase3SalaryCorrelation:
 class TestPhase3DashboardReadiness:
     """Validate that dashboard can read Phase 3 data."""
 
-    def test_company_hiring_view_exists(self, db_session):
+    def test_company_hiring_view_exists(self, db_session, seed_enriched_data):
         """Verify the v_company_hiring view exists and is queryable."""
         from src.database import get_db_context
 
@@ -135,7 +135,7 @@ class TestPhase3DashboardReadiness:
             except Exception as e:
                 pytest.fail(f"View v_company_hiring query failed: {e}")
 
-    def test_city_distribution_view_exists(self, db_session):
+    def test_city_distribution_view_exists(self, db_session, seed_enriched_data):
         """Verify the v_city_distribution view exists and is queryable."""
         from src.database import get_db_context
 
@@ -148,7 +148,7 @@ class TestPhase3DashboardReadiness:
             except Exception as e:
                 pytest.fail(f"View v_city_distribution query failed: {e}")
 
-    def test_enriched_job_aggregations(self, db_session):
+    def test_enriched_job_aggregations(self, db_session, seed_enriched_data):
         """Verify enriched job aggregations work for dashboard."""
         from src.database import get_db_context
 
@@ -168,7 +168,7 @@ class TestPhase3DashboardReadiness:
         assert result[1] >= 1, "Should have at least 1 enriched job"
 
 
-def test_phase3_success_criteria(db_session):
+def test_phase3_success_criteria(db_session, seed_enriched_data):
     """Aggregate check: all Phase 3 success criteria met."""
     from src.database import get_db_context
 

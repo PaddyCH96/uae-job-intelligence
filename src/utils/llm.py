@@ -7,6 +7,7 @@ Falls back to fuzzy matching if LLM is unavailable.
 from __future__ import annotations
 
 import json
+import os
 import re
 import time
 from typing import Any, Dict, List, Optional
@@ -19,7 +20,7 @@ from src.utils.logger import logger
 # Configuration
 # ---------------------------------------------------------------------------
 
-OLLAMA_BASE = "http://localhost:11434"
+OLLAMA_BASE = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
 DEFAULT_MODEL = "qwen2.5-coder:7b"
 
 # Prompt templates for extraction
